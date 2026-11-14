@@ -202,7 +202,7 @@ function Landing() {
       <footer className="border-t border-line bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-6 text-xs text-mute">
           <span>© 2026 DermaAI · Skin Disease Detection & Prediction System</span>
-          <span>Prototype build · mock data only</span>
+          <span>Prototype build</span>
         </div>
       </footer>
     </div>

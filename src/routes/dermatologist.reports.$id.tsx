@@ -73,8 +73,8 @@ function Inner() {
     );
   }
 
-  function handleSave(markReviewed: boolean) {
-    const success = saveDiagnosis(id, { diagnosis, notes, recommendations }, markReviewed);
+  async function handleSave(markReviewed: boolean) {
+    const success = await saveDiagnosis(id, { diagnosis, notes, recommendations }, markReviewed);
     setSaved(success);
     setSaveError(success ? null : "This case is no longer assigned to you.");
     if (success) setTimeout(() => setSaved(false), 2500);

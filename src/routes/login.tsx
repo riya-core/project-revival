@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Card, Field, Input, Select } from "@/components/common/ui";
 import { dashboardPath, useApp } from "@/context/AppContext";
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { login } = useApp();
+  const { hydrated, login, user } = useApp();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,15 +31,23 @@ function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (hydrated && user && !busy) navigate({ to: dashboardPath[user.role] });
+  }, [busy, hydrated, navigate, user]);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setNotice(null);
-    if (!/^\S+@\S+\.\S+$/.test(email)) return setError("Enter a valid email address.");
-    if (password.length < 4) return setError("Password must be at least 4 characters.");
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError("Enter a valid email address.");
+    if (password.length < 6) return setError("Password must be at least 6 characters.");
     setError(null);
-    const session = login(email, role);
-    navigate({ to: dashboardPath[session.role] });
+    setBusy(true);
+    const result = await login(email, password, role);
+    setBusy(false);
+    if (!result.ok) return setError(result.error);
+    navigate({ to: dashboardPath[result.user.role] });
   };
 
   return (
@@ -67,7 +75,7 @@ function LoginPage() {
                 <Input
                   type={show ? "text" : "password"}
                   value={password}
-                  placeholder="Any password works in this prototype"
+                  placeholder="Your password"
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <button
@@ -111,7 +119,7 @@ function LoginPage() {
             {error ? <div className="text-xs font-medium text-riskink">{error}</div> : null}
             {notice ? <div className="text-xs font-medium text-cautionink">{notice}</div> : null}
 
-            <Button type="submit">Login</Button>
+            <Button type="submit" disabled={busy}>{busy ? "Signing in…" : "Login"}</Button>
 
             <p className="text-sm text-mute">
               New here?{" "}
@@ -125,7 +133,7 @@ function LoginPage() {
         <Card className="p-6 lg:col-span-5">
           <div className="text-sm font-semibold">Demo accounts</div>
           <p className="mt-1 text-xs text-mute">
-            Authentication is simulated. Pick a role, use the matching email and any password.
+            Pick a role to fill in its sample email, then enter that account’s password.
           </p>
           <div className="mt-4 space-y-2">
             {(Object.keys(DEMO_ACCOUNTS) as Role[]).map((r) => (
@@ -134,7 +142,6 @@ function LoginPage() {
                 onClick={() => {
                   setRole(r);
                   setEmail(DEMO_ACCOUNTS[r]);
-                  setPassword("demo1234");
                 }}
                 className="flex w-full items-center justify-between rounded-xl bg-canvas2 px-3 py-2.5 text-left hover:bg-line/60"
               >

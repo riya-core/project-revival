@@ -24,11 +24,20 @@ export const Route = createFileRoute("/admin/settings")({
 });
 
 function Inner() {
-  const { threshold, setThreshold, predictions } = useApp();
+  const { threshold, settings, saveSettings, predictions } = useApp();
   const [local, setLocal] = useState(threshold);
-  const [model, setModel] = useState("DermaNet-v2 (simulated)");
-  const [explain, setExplain] = useState("Grad-CAM");
+  const [model, setModel] = useState(settings.activeModel);
+  const [explain, setExplain] = useState(settings.defaultExplanation);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  async function save(patch: Parameters<typeof saveSettings>[0]) {
+    const result = await saveSettings(patch);
+    setSaveError(result.ok ? null : result.error);
+    if (!result.ok) return;
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
 
   const flagged = predictions.filter((p) => p.confidence < local).length;
 
@@ -75,11 +84,7 @@ function Inner() {
         </div>
         <div className="mt-5 flex items-center gap-3">
           <Button
-            onClick={() => {
-              setThreshold(local);
-              setSaved(true);
-              setTimeout(() => setSaved(false), 2500);
-            }}
+            onClick={() => save({ threshold: local, activeModel: model, defaultExplanation: explain })}
           >
             Save settings
           </Button>
@@ -87,18 +92,18 @@ function Inner() {
             variant="secondary"
             onClick={() => {
               setLocal(70);
-              setThreshold(70);
+              void save({ threshold: 70 });
             }}
           >
             Reset to default
           </Button>
           {saved ? <span className="text-sm font-medium text-brandink">Settings saved</span> : null}
+          {saveError ? <span role="alert" className="text-sm font-medium text-riskink">{saveError}</span> : null}
         </div>
       </Card>
 
       <p className="text-xs text-mute">
-        These controls affect the prototype's mock behaviour only. No model is retrained or
-        deployed.
+        Settings are saved for every DermaAI user. No model is retrained or deployed.
       </p>
     </>
   );

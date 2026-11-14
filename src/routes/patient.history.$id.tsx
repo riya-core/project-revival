@@ -63,9 +63,9 @@ function Inner() {
         threshold={threshold}
         assignedDoctorName={users.find((person) => person.id === prediction.assignedDoctorId)?.name}
         reviewRequestError={reviewRequestError}
-        onRequestReview={() => {
-          const result = requestReview(prediction.id);
-          setReviewRequestError(result.ok ? null : result.error ?? "Could not request a review.");
+        onRequestReview={async () => {
+          const result = await requestReview(prediction.id);
+          setReviewRequestError(result.ok ? null : result.error);
         }}
       />
 

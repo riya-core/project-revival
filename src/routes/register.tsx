@@ -36,12 +36,15 @@ function RegisterPage() {
   });
   const [show, setShow] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setNotice(null);
     const next: Record<string, string> = {};
     if (form.name.trim().length < 3) next["name"] = "Enter your full name.";
     if (!/^\S+@\S+\.\S+$/.test(form.email)) next["email"] = "Enter a valid email address.";
@@ -50,8 +53,18 @@ function RegisterPage() {
     setErrors(next);
     if (Object.keys(next).length) return;
 
-    const session = register(form.name.trim(), form.email.trim(), form.role);
-    navigate({ to: dashboardPath[session.role] });
+    setBusy(true);
+    const result = await register(form.name.trim(), form.email.trim(), form.password, form.role);
+    setBusy(false);
+    if (!result.ok) {
+      setErrors({ email: result.error });
+      return;
+    }
+    if (result.needsConfirmation) {
+      setNotice("Check your inbox and confirm your email address, then log in.");
+      return;
+    }
+    navigate({ to: dashboardPath[result.user.role] });
   };
 
   return (
@@ -101,7 +114,9 @@ function RegisterPage() {
               </Select>
             </Field>
 
-            <Button type="submit">Create account</Button>
+            {notice ? <div className="text-xs font-medium text-cautionink">{notice}</div> : null}
+
+            <Button type="submit" disabled={busy}>{busy ? "Creating account…" : "Create account"}</Button>
 
             <p className="text-sm text-mute">
               Already registered?{" "}
