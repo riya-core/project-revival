@@ -57,7 +57,7 @@ function isTriage(value: string): value is Triage {
 }
 
 export function AnalyzeFlow() {
-  const { user, addPrediction } = useApp();
+  const { user, addPrediction, attachExplanation, settings } = useApp();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
@@ -70,6 +70,8 @@ export function AnalyzeFlow() {
   const [explanationError, setExplanationError] = useState<string | null>(null);
   const [gradcamResult, setGradcamResult] = useState<GradcamResponse | null>(null);
   const [limeResult, setLimeResult] = useState<LimeResponse | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const savedScan = useRef<{ id: string; saved: Promise<boolean> } | null>(null);
   const requestId = useRef(0);
   const activeController = useRef<AbortController | null>(null);
   const requestInProgress = useRef(false);
@@ -81,6 +83,8 @@ export function AnalyzeFlow() {
     activeController.current = null;
     requestInProgress.current = false;
     analyzedFile.current = null;
+    savedScan.current = null;
+    setSaveError(null);
     setSelectedFile(file);
     setPreviewUrl(imagePreview);
     setPrediction(null);
@@ -129,7 +133,20 @@ export function AnalyzeFlow() {
       }
       setPrediction(data);
       if (user?.role === "patient") {
-        addPrediction(toPatientReport(data, { id: user.id, name: user.name }, crypto.randomUUID()));
+        const scanId = crypto.randomUUID();
+        const extra = data as PredictionResponse & { model_name?: unknown; model_version?: unknown };
+        const saved = addPrediction(toPatientReport(data, { id: user.id, name: user.name }, scanId), {
+          file,
+          uncertainty: data.uncertainty,
+          triage: data.triage,
+          probabilities: data.probabilities,
+          modelName: typeof extra.model_name === "string" ? extra.model_name : settings.activeModel,
+          ...(typeof extra.model_version === "string" ? { modelVersion: extra.model_version } : {}),
+        }).then((result) => {
+          if (request === requestId.current) setSaveError(result.ok ? null : result.error);
+          return result.ok;
+        });
+        savedScan.current = { id: scanId, saved };
       }
       setExplainClass(classCode(data.class_name) ?? "nv");
       analyzedFile.current = file;
@@ -149,6 +166,12 @@ export function AnalyzeFlow() {
         setPredicting(false);
       }
     }
+  };
+
+  const persistExplanation = async (kind: "gradcam" | "lime", imageSrc: string) => {
+    const scan = savedScan.current;
+    if (!scan || !(await scan.saved)) return;
+    await attachExplanation(scan.id, kind, imageSrc);
   };
 
   const explain = async (kind: "gradcam" | "lime") => {
@@ -173,10 +196,16 @@ export function AnalyzeFlow() {
       });
       if (kind === "gradcam") {
         const data = await readResponse<GradcamResponse>(response);
-        if (request === requestId.current) setGradcamResult(data);
+        if (request === requestId.current) {
+          setGradcamResult(data);
+          void persistExplanation("gradcam", data.overlay);
+        }
       } else {
         const data = await readResponse<LimeResponse>(response);
-        if (request === requestId.current) setLimeResult(data);
+        if (request === requestId.current) {
+          setLimeResult(data);
+          void persistExplanation("lime", data.pos_neg_overlay);
+        }
       }
     } catch (error) {
       if (request !== requestId.current || (error instanceof DOMException && error.name === "AbortError")) return;
@@ -390,6 +419,10 @@ export function AnalyzeFlow() {
             </section>
           ) : null}
         </Card>
+      ) : null}
+
+      {saveError ? (
+        <p role="alert" className="mt-3 text-xs font-medium text-riskink">{saveError}</p>
       ) : null}
 
       <p data-testid="disclaimer" className="mt-5 border-t border-line py-4 text-xs leading-relaxed text-inksoft">

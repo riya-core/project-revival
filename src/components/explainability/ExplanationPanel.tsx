@@ -57,7 +57,7 @@ export function ExplanationPanel({ explanation }: { explanation: Explanation }) 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {tab === "Grad-CAM" ? (
           <img
-            src={gradcam}
+            src={explanation.gradcamUrl ?? gradcam}
             alt="Grad-CAM heatmap overlay highlighting the lesion regions that influenced the prediction"
             className="aspect-[16/10] w-full rounded-lg object-cover outline-1 -outline-offset-1 outline-black/5"
             loading="lazy"
@@ -68,7 +68,16 @@ export function ExplanationPanel({ explanation }: { explanation: Explanation }) 
               "Local feature contributions"
             </div>
             <div className="mt-3">
-              <ContributionBars items={explanation.lime} />
+              {explanation.lime.length === 0 && explanation.limeUrl ? (
+                <img
+                  src={explanation.limeUrl}
+                  alt="LIME overlay: green regions support the predicted class, red regions push against it"
+                  className="aspect-square w-full rounded-lg object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <ContributionBars items={explanation.lime} />
+              )}
             </div>
           </div>
         )}
