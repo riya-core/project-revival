@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  type QueueCase,
   MAX_REVIEW_REQUESTS,
   REVIEW_REASSIGN_AFTER_MS,
   assignReviewCase,
@@ -13,11 +14,11 @@ const doctors = [
   { id: "d2", role: "dermatologist", status: "Active" },
   { id: "inactive", role: "dermatologist", status: "Inactive" },
 ];
-const openCase = (id: string, doctorId?: string, assignedAt = 1) => ({
+const openCase = (id: string, doctorId?: string, assignedAt = 1): QueueCase => ({
   id,
   status: "Pending Review",
-  risk: "Moderate" as const,
-  assignedDoctorId: doctorId,
+  risk: "Moderate",
+  ...(doctorId ? { assignedDoctorId: doctorId } : {}),
   assignedAt,
 });
 
@@ -62,6 +63,7 @@ describe("review queue rules", () => {
   test("assigns high-risk cases urgent priority and records request count without changing it on reassignment", () => {
     const assigned = assignReviewCase({ ...openCase("high"), risk: "High", reviewRequestCount: 2 }, doctors, [], 10);
     expect(assigned?.queuePriority).toBe("Urgent");
+    if (!assigned) throw new Error("expected an assignment");
     const moved = reassignOverdueReviews([{ ...assigned, assignedAt: 1 }], doctors, 1 + REVIEW_REASSIGN_AFTER_MS);
     expect(moved[0]?.reviewRequestCount).toBe(2);
   });
