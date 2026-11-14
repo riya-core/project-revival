@@ -100,9 +100,9 @@ export function DashboardLayout({ role, children }: { role: Role; children: Reac
       </nav>
       <div className="mt-3 border-t border-line pt-3">
         <button
-          onClick={() => {
-            logout();
-            navigate({ to: "/login" });
+          onClick={async () => {
+            await logout();
+            navigate({ to: "/login", replace: true });
           }}
           className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-inksoft hover:bg-canvas2"
         >

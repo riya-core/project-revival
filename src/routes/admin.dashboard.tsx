@@ -43,7 +43,7 @@ function Inner() {
       <SectionTitle
         eyebrow="Dashboard"
         title="System overview"
-        right={<span className="text-sm text-mute">Mock analytics</span>}
+        right={<span className="text-sm text-mute">Live analytics</span>}
       />
 
       <div className="grid gap-3 sm:grid-cols-4">
@@ -98,8 +98,8 @@ function Inner() {
       </div>
 
       <p className="text-xs text-mute">
-        All figures come from in-browser mock data. DermaAI is an educational prototype and stores
-        nothing on a server.
+        Figures come from the DermaAI database. DermaAI is an educational prototype, not a
+        medical device.
       </p>
     </>
   );

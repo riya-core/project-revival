@@ -16,18 +16,21 @@ export function ProfilePage({ role }: { role: Role }) {
   const [age, setAge] = useState(user?.age ? String(user.age) : "");
   const [gender, setGender] = useState(user?.gender ?? "");
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const mine = predictions.filter((p) => p.patientId === user?.id);
 
-  function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     const trimmedName = name.trim();
-    updateProfile({
+    const result = await updateProfile({
       ...(trimmedName ? { name: trimmedName } : {}),
       phone: phone.trim(),
       ...(age ? { age: Number(age) } : {}),
       ...(gender ? { gender } : {}),
     });
+    setSaveError(result.ok ? null : result.error);
+    if (!result.ok) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
@@ -103,6 +106,7 @@ export function ProfilePage({ role }: { role: Role }) {
             {saved ? (
               <span className="text-sm font-medium text-brandink">Profile updated</span>
             ) : null}
+            {saveError ? <span role="alert" className="text-sm font-medium text-riskink">{saveError}</span> : null}
           </div>
         </form>
       </Card>
@@ -130,8 +134,8 @@ export function ProfilePage({ role }: { role: Role }) {
       ) : null}
 
       <p className="text-xs text-mute">
-        DermaAI is an educational decision-support prototype. Profile data lives only in this
-        browser session and is never sent anywhere.
+        DermaAI is an educational decision-support prototype. Your profile is stored in your
+        DermaAI account and is only visible to you, your care team and administrators.
       </p>
     </>
   );
