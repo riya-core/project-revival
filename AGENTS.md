@@ -28,3 +28,8 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+
+- Keep the skin-lesion model flow in the existing patient analysis page and call the user's Python service directly from the browser (base URL from `VITE_API_URL`), so the rest of this frontend-only prototype remains unchanged.
+- Keep review assignment, eligibility, queue priority, and four-day reassignment rules in the shared review-queue policy module so patient and doctor screens use the same rules.

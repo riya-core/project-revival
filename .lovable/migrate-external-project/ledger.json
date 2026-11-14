@@ -1,0 +1,89 @@
+{
+  "source": "code-archive (Derma_AI.zip, a Lovable TanStack Start project)",
+  "capabilities": [
+    {
+      "capability": "code",
+      "source": "src/ (routes, components, context, lib, data, assets)",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "Done"
+    },
+    {
+      "capability": "schema",
+      "source": "none - no database; demo data lives in src/data/mockData.ts",
+      "outcome": "not_applicable",
+      "status": "verified",
+      "next_action": "None; optional upgrade to Lovable Cloud tables if the user wants shared persistence"
+    },
+    {
+      "capability": "records",
+      "source": "mock seed data + browser localStorage (dermaai.users, dermaai.predictions)",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "Done"
+    },
+    {
+      "capability": "auth identities",
+      "source": "demo sign-in in AppContext (email + role, no password, localStorage)",
+      "outcome": "keep_demo",
+      "status": "pending_decision",
+      "next_action": "Ask user whether to replace demo sign-in with real Lovable Cloud accounts; no real users exist to import"
+    },
+    {
+      "capability": "authorization",
+      "source": "role-aware routes (patient / dermatologist / admin) in client context",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "Done"
+    },
+    {
+      "capability": "uploaded file bytes",
+      "source": "none stored; images sent to external model service per request",
+      "outcome": "not_applicable",
+      "status": "verified",
+      "next_action": "None"
+    },
+    {
+      "capability": "external provider: Python skin-lesion model API",
+      "source": "AnalyzeFlow.tsx -> VITE_API_URL /predict, /explain/gradcam, /explain/lime (fallback http://localhost:8000)",
+      "outcome": "preserve",
+      "status": "pending",
+      "next_action": "Need the public URL of the user's Python service; localhost fallback is unreachable from the preview"
+    },
+    {
+      "capability": "public endpoints / webhooks / schedules",
+      "source": "none found",
+      "outcome": "not_applicable",
+      "status": "verified",
+      "next_action": "None"
+    },
+    {
+      "capability": "secrets",
+      "source": "none required (VITE_API_URL is a public URL, not a secret)",
+      "outcome": "not_applicable",
+      "status": "verified",
+      "next_action": "None"
+    },
+    {
+      "capability": "tests",
+      "source": "tests/review-queue.test.ts, tests/skin-analysis.test.ts (bun:test)",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "Done"
+    },
+    {
+      "capability": "cutover",
+      "source": "n/a",
+      "outcome": "not_applicable",
+      "status": "verified",
+      "next_action": "None"
+    },
+    {
+      "capability": "verification",
+      "source": "build, tests, key routes",
+      "outcome": "verify",
+      "status": "verified",
+      "next_action": "Typecheck clean, 14 tests pass, landing + patient/dermatologist/admin sign-in and pages load with no console errors"
+    }
+  ]
+}
