@@ -361,8 +361,8 @@ export type Database = {
         Returns: undefined
       }
       attach_scan_explanation: {
-        Args: { _kind: string; _path: string; _scan_id: string }
-        Returns: undefined
+        Args: { _actor: string; _kind: string; _path: string; _scan_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -379,10 +379,17 @@ export type Database = {
           status: string
         }[]
       }
-      log_event: { Args: { _action: string }; Returns: undefined }
-      mark_scan_seen: { Args: { _scan_id: string }; Returns: undefined }
+      log_event: {
+        Args: { _action: string; _actor: string }
+        Returns: undefined
+      }
+      mark_scan_seen: {
+        Args: { _actor: string; _scan_id: string }
+        Returns: undefined
+      }
       submit_review: {
         Args: {
+          _actor: string
           _diagnosis: string
           _final: boolean
           _notes: string
