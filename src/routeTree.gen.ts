@@ -10,33 +10,259 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminLogsRouteImport } from './routes/admin.logs'
+import { Route as AdminProfileRouteImport } from './routes/admin.profile'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as DermatologistDashboardRouteImport } from './routes/dermatologist.dashboard'
+import { Route as DermatologistPatientsRouteImport } from './routes/dermatologist.patients'
+import { Route as DermatologistProfileRouteImport } from './routes/dermatologist.profile'
+import { Route as PatientAnalyzeRouteImport } from './routes/patient.analyze'
+import { Route as PatientDashboardRouteImport } from './routes/patient.dashboard'
+import { Route as PatientProfileRouteImport } from './routes/patient.profile'
+import { Route as DermatologistReportsIndexRouteImport } from './routes/dermatologist.reports.index'
+import { Route as DermatologistReportsIdRouteImport } from './routes/dermatologist.reports.$id'
+import { Route as PatientHistoryIndexRouteImport } from './routes/patient.history.index'
+import { Route as PatientHistoryIdRouteImport } from './routes/patient.history.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLogsRoute = AdminLogsRouteImport.update({
+  id: '/admin/logs',
+  path: '/admin/logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminProfileRoute = AdminProfileRouteImport.update({
+  id: '/admin/profile',
+  path: '/admin/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DermatologistDashboardRoute = DermatologistDashboardRouteImport.update({
+  id: '/dermatologist/dashboard',
+  path: '/dermatologist/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DermatologistPatientsRoute = DermatologistPatientsRouteImport.update({
+  id: '/dermatologist/patients',
+  path: '/dermatologist/patients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DermatologistProfileRoute = DermatologistProfileRouteImport.update({
+  id: '/dermatologist/profile',
+  path: '/dermatologist/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientAnalyzeRoute = PatientAnalyzeRouteImport.update({
+  id: '/patient/analyze',
+  path: '/patient/analyze',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientDashboardRoute = PatientDashboardRouteImport.update({
+  id: '/patient/dashboard',
+  path: '/patient/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientProfileRoute = PatientProfileRouteImport.update({
+  id: '/patient/profile',
+  path: '/patient/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DermatologistReportsIndexRoute =
+  DermatologistReportsIndexRouteImport.update({
+    id: '/dermatologist/reports/',
+    path: '/dermatologist/reports/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DermatologistReportsIdRoute = DermatologistReportsIdRouteImport.update({
+  id: '/dermatologist/reports/$id',
+  path: '/dermatologist/reports/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientHistoryIndexRoute = PatientHistoryIndexRouteImport.update({
+  id: '/patient/history/',
+  path: '/patient/history/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientHistoryIdRoute = PatientHistoryIdRouteImport.update({
+  id: '/patient/history/$id',
+  path: '/patient/history/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/profile': typeof AdminProfileRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/dermatologist/dashboard': typeof DermatologistDashboardRoute
+  '/dermatologist/patients': typeof DermatologistPatientsRoute
+  '/dermatologist/profile': typeof DermatologistProfileRoute
+  '/patient/analyze': typeof PatientAnalyzeRoute
+  '/patient/dashboard': typeof PatientDashboardRoute
+  '/patient/profile': typeof PatientProfileRoute
+  '/dermatologist/reports/$id': typeof DermatologistReportsIdRoute
+  '/patient/history/$id': typeof PatientHistoryIdRoute
+  '/dermatologist/reports/': typeof DermatologistReportsIndexRoute
+  '/patient/history/': typeof PatientHistoryIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/profile': typeof AdminProfileRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/dermatologist/dashboard': typeof DermatologistDashboardRoute
+  '/dermatologist/patients': typeof DermatologistPatientsRoute
+  '/dermatologist/profile': typeof DermatologistProfileRoute
+  '/patient/analyze': typeof PatientAnalyzeRoute
+  '/patient/dashboard': typeof PatientDashboardRoute
+  '/patient/profile': typeof PatientProfileRoute
+  '/dermatologist/reports/$id': typeof DermatologistReportsIdRoute
+  '/patient/history/$id': typeof PatientHistoryIdRoute
+  '/dermatologist/reports': typeof DermatologistReportsIndexRoute
+  '/patient/history': typeof PatientHistoryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/profile': typeof AdminProfileRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/dermatologist/dashboard': typeof DermatologistDashboardRoute
+  '/dermatologist/patients': typeof DermatologistPatientsRoute
+  '/dermatologist/profile': typeof DermatologistProfileRoute
+  '/patient/analyze': typeof PatientAnalyzeRoute
+  '/patient/dashboard': typeof PatientDashboardRoute
+  '/patient/profile': typeof PatientProfileRoute
+  '/dermatologist/reports/$id': typeof DermatologistReportsIdRoute
+  '/patient/history/$id': typeof PatientHistoryIdRoute
+  '/dermatologist/reports/': typeof DermatologistReportsIndexRoute
+  '/patient/history/': typeof PatientHistoryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/admin/dashboard'
+    | '/admin/logs'
+    | '/admin/profile'
+    | '/admin/settings'
+    | '/admin/users'
+    | '/dermatologist/dashboard'
+    | '/dermatologist/patients'
+    | '/dermatologist/profile'
+    | '/patient/analyze'
+    | '/patient/dashboard'
+    | '/patient/profile'
+    | '/dermatologist/reports/$id'
+    | '/patient/history/$id'
+    | '/dermatologist/reports/'
+    | '/patient/history/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/admin/dashboard'
+    | '/admin/logs'
+    | '/admin/profile'
+    | '/admin/settings'
+    | '/admin/users'
+    | '/dermatologist/dashboard'
+    | '/dermatologist/patients'
+    | '/dermatologist/profile'
+    | '/patient/analyze'
+    | '/patient/dashboard'
+    | '/patient/profile'
+    | '/dermatologist/reports/$id'
+    | '/patient/history/$id'
+    | '/dermatologist/reports'
+    | '/patient/history'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/register'
+    | '/admin/dashboard'
+    | '/admin/logs'
+    | '/admin/profile'
+    | '/admin/settings'
+    | '/admin/users'
+    | '/dermatologist/dashboard'
+    | '/dermatologist/patients'
+    | '/dermatologist/profile'
+    | '/patient/analyze'
+    | '/patient/dashboard'
+    | '/patient/profile'
+    | '/dermatologist/reports/$id'
+    | '/patient/history/$id'
+    | '/dermatologist/reports/'
+    | '/patient/history/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminLogsRoute: typeof AdminLogsRoute
+  AdminProfileRoute: typeof AdminProfileRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  DermatologistDashboardRoute: typeof DermatologistDashboardRoute
+  DermatologistPatientsRoute: typeof DermatologistPatientsRoute
+  DermatologistProfileRoute: typeof DermatologistProfileRoute
+  PatientAnalyzeRoute: typeof PatientAnalyzeRoute
+  PatientDashboardRoute: typeof PatientDashboardRoute
+  PatientProfileRoute: typeof PatientProfileRoute
+  DermatologistReportsIdRoute: typeof DermatologistReportsIdRoute
+  PatientHistoryIdRoute: typeof PatientHistoryIdRoute
+  DermatologistReportsIndexRoute: typeof DermatologistReportsIndexRoute
+  PatientHistoryIndexRoute: typeof PatientHistoryIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +274,147 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/logs': {
+      id: '/admin/logs'
+      path: '/admin/logs'
+      fullPath: '/admin/logs'
+      preLoaderRoute: typeof AdminLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/profile': {
+      id: '/admin/profile'
+      path: '/admin/profile'
+      fullPath: '/admin/profile'
+      preLoaderRoute: typeof AdminProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dermatologist/dashboard': {
+      id: '/dermatologist/dashboard'
+      path: '/dermatologist/dashboard'
+      fullPath: '/dermatologist/dashboard'
+      preLoaderRoute: typeof DermatologistDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dermatologist/patients': {
+      id: '/dermatologist/patients'
+      path: '/dermatologist/patients'
+      fullPath: '/dermatologist/patients'
+      preLoaderRoute: typeof DermatologistPatientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dermatologist/profile': {
+      id: '/dermatologist/profile'
+      path: '/dermatologist/profile'
+      fullPath: '/dermatologist/profile'
+      preLoaderRoute: typeof DermatologistProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patient/analyze': {
+      id: '/patient/analyze'
+      path: '/patient/analyze'
+      fullPath: '/patient/analyze'
+      preLoaderRoute: typeof PatientAnalyzeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patient/dashboard': {
+      id: '/patient/dashboard'
+      path: '/patient/dashboard'
+      fullPath: '/patient/dashboard'
+      preLoaderRoute: typeof PatientDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patient/profile': {
+      id: '/patient/profile'
+      path: '/patient/profile'
+      fullPath: '/patient/profile'
+      preLoaderRoute: typeof PatientProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dermatologist/reports/': {
+      id: '/dermatologist/reports/'
+      path: '/dermatologist/reports'
+      fullPath: '/dermatologist/reports/'
+      preLoaderRoute: typeof DermatologistReportsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dermatologist/reports/$id': {
+      id: '/dermatologist/reports/$id'
+      path: '/dermatologist/reports/$id'
+      fullPath: '/dermatologist/reports/$id'
+      preLoaderRoute: typeof DermatologistReportsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patient/history/': {
+      id: '/patient/history/'
+      path: '/patient/history'
+      fullPath: '/patient/history/'
+      preLoaderRoute: typeof PatientHistoryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patient/history/$id': {
+      id: '/patient/history/$id'
+      path: '/patient/history/$id'
+      fullPath: '/patient/history/$id'
+      preLoaderRoute: typeof PatientHistoryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminLogsRoute: AdminLogsRoute,
+  AdminProfileRoute: AdminProfileRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  DermatologistDashboardRoute: DermatologistDashboardRoute,
+  DermatologistPatientsRoute: DermatologistPatientsRoute,
+  DermatologistProfileRoute: DermatologistProfileRoute,
+  PatientAnalyzeRoute: PatientAnalyzeRoute,
+  PatientDashboardRoute: PatientDashboardRoute,
+  PatientProfileRoute: PatientProfileRoute,
+  DermatologistReportsIdRoute: DermatologistReportsIdRoute,
+  PatientHistoryIdRoute: PatientHistoryIdRoute,
+  DermatologistReportsIndexRoute: DermatologistReportsIndexRoute,
+  PatientHistoryIndexRoute: PatientHistoryIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
