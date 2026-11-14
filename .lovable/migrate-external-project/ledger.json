@@ -26,8 +26,8 @@
       "capability": "auth identities",
       "source": "demo sign-in in AppContext (email + role, no password, localStorage)",
       "outcome": "keep_demo",
-      "status": "pending_decision",
-      "next_action": "Ask user whether to replace demo sign-in with real Lovable Cloud accounts; no real users exist to import"
+      "status": "accepted",
+      "next_action": "User skipped the accounts question; demo sign-in kept as in source. Real Lovable Cloud accounts can be added on request."
     },
     {
       "capability": "authorization",
