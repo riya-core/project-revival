@@ -18,7 +18,8 @@
 - [x] Explainability components (Grad-CAM image, LIME)
 - [x] Head metadata per route, build clean
 
-## Supabase integration (waiting on user to connect their Supabase project)
-- [ ] Tables: profiles, patients, scans, reports, system_logs, system_settings (+ user_roles for admin checks), RLS on all
-- [ ] Real sign-in, replace mock data with live reads/writes, keep UI and review-queue rules unchanged
-- [ ] Report migrations and required Supabase configuration
+## Supabase integration
+- [x] Tables: profiles, patients, scans, reports, system_logs, system_settings (+ user_roles for admin checks), RLS on all
+- [x] Real sign-in, replace mock data with live reads/writes, keep UI and review-queue rules unchanged
+- [x] Report migrations and required Supabase configuration
+- [ ] Waiting on user: first admin account, sign-in redirect URLs, Python model address (VITE_API_URL)
