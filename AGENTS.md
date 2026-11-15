@@ -33,3 +33,8 @@ use the editor.
 
 - Keep the skin-lesion model flow in the existing patient analysis page and call the user's Python service directly from the browser (base URL from `VITE_API_URL`), so the rest of this frontend-only prototype remains unchanged.
 - Keep review assignment, eligibility, queue priority, and four-day reassignment rules in the shared review-queue policy module so patient and doctor screens use the same rules.
+- App data lives in the user's connected Supabase project; `src/context/AppContext.tsx` is the only data layer and maps rows to the existing screen types through `src/lib/scan-records.ts`, so pages keep their props and UI unchanged.
+- Cross-user writes (queue assignment, reviews, seen marks, explanation paths, session logs, clinician list) go through `src/lib/dermaai.functions.ts`, which verifies the caller with `requireSupabaseAuth` and then calls service-role-only SQL functions; signed-in users cannot execute those SQL functions directly.
+- Roles are authoritative in `user_roles` (checked with `has_role`); `profiles.role` is a display mirror changed only by `assign_role` from the SQL editor, so the app can never grant admin.
+- Scan, Grad-CAM and LIME images live in the private `scan-images` bucket under `<user_id>/<scan_id>/`, and screens use short-lived signed links, because storage rules key on the first folder.
+- Page access stays in `DashboardLayout` (client-side redirect by role); real protection is row-level security, so every new table needs RLS plus grants.
