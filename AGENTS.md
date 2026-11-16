@@ -31,10 +31,12 @@ use the editor.
 
 ## Project rules
 
-- Keep the skin-lesion model flow in the existing patient analysis page and call the user's Python service directly from the browser (base URL from `VITE_API_URL`), so the rest of this frontend-only prototype remains unchanged.
+- The skin-lesion model is called only from server functions in `src/lib/ml.functions.ts` (analyze, explain-lime, explain-gradcam) with `MODEL_API_URL`/`HF_API_TOKEN` server secrets; the browser only uploads the original image and never sees the token. TanStack server functions are used instead of Supabase Edge Functions because this stack runs server logic in the app.
+- A scan row is created at upload (`analysis_status = uploaded`); only the server writes prediction fields and sets `analyzed`, and screens list analysed scans only, so patients cannot forge results.
+- Model responses are validated by `src/lib/model-response.ts` (shared by server and tests); 404/405/501 from an explanation endpoint means the model does not support it.
 - Keep review assignment, eligibility, queue priority, and four-day reassignment rules in the shared review-queue policy module so patient and doctor screens use the same rules.
 - App data lives in the user's connected Supabase project; `src/context/AppContext.tsx` is the only data layer and maps rows to the existing screen types through `src/lib/scan-records.ts`, so pages keep their props and UI unchanged.
 - Cross-user writes (queue assignment, reviews, seen marks, explanation paths, session logs, clinician list) go through `src/lib/dermaai.functions.ts`, which verifies the caller with `requireSupabaseAuth` and then calls service-role-only SQL functions; signed-in users cannot execute those SQL functions directly.
 - Roles are authoritative in `user_roles` (checked with `has_role`); `profiles.role` is a display mirror changed only by `assign_role` from the SQL editor, so the app can never grant admin.
-- Scan, Grad-CAM and LIME images live in the private `scan-images` bucket under `<user_id>/<scan_id>/`, and screens use short-lived signed links, because storage rules key on the first folder.
+- Original scan images live in the private `scan-images` bucket and Grad-CAM/LIME images in the private `heatmaps` bucket (written only by the server), both under `<user_id>/<scan_id>/`; screens use short-lived signed links because storage rules key on the first folder.
 - Page access stays in `DashboardLayout` (client-side redirect by role); real protection is row-level security, so every new table needs RLS plus grants.

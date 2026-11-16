@@ -22,4 +22,9 @@
 - [x] Tables: profiles, patients, scans, reports, system_logs, system_settings (+ user_roles for admin checks), RLS on all
 - [x] Real sign-in, replace mock data with live reads/writes, keep UI and review-queue rules unchanged
 - [x] Report migrations and required Supabase configuration
-- [ ] Waiting on user: first admin account, sign-in redirect URLs, Python model address (VITE_API_URL)
+- [ ] Waiting on user: first admin account, sign-in redirect URLs
+
+## Secure model integration
+- [x] Patient selection, upload with progress, server-side analyze (prediction, confidence, uncertainty, model name/version saved)
+- [x] Grad-CAM after analysis when supported; LIME on request, stored in private heatmaps storage
+- [ ] Waiting on user: MODEL_API_URL and HF_API_TOKEN secrets (Hugging Face / Render model service)
