@@ -1,66 +1,37 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Badge, Button, Card, ProgressBar, Select } from "@/components/common/ui";
 import { ImageUploader } from "@/components/patient/ImageUploader";
-import { SKIN_CLASSES, classCode, classLabel, percentage, toPatientReport, type SkinClassCode } from "@/lib/skin-analysis";
+import { SKIN_CLASSES, classCode, classLabel, percentage, type SkinClassCode } from "@/lib/skin-analysis";
 import { useApp } from "@/context/AppContext";
+import { analyzeScan, explainScanGradcam, explainScanLime } from "@/lib/ml.functions";
+import type { GradcamImages, LimeImages, ModelPrediction } from "@/lib/model-response";
 
-type Triage = "GREEN" | "YELLOW" | "RED";
-type PredictionResponse = {
-  class_name: string;
-  class_index: number;
-  confidence: number;
-  uncertainty: number;
-  triage: Triage;
-  message: string;
-  probabilities: Record<string, number>;
-};
-type GradcamResponse = {
-  class_name: string;
-  probability: number;
-  original: string;
-  heatmap_only: string;
-  overlay: string;
-};
-type LimeResponse = {
-  class_name: string;
-  probability: number;
-  seconds: number;
-  num_samples: number;
-  original: string;
-  positive_overlay: string;
-  pos_neg_overlay: string;
-};
-
-const API_BASE_URL = (import.meta.env["VITE_API_URL"] || "http://localhost:8000").replace(/\/+$/, "");
 const classCodes = Object.keys(SKIN_CLASSES) as SkinClassCode[];
 
-async function readResponse<T>(response: Response): Promise<T> {
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new Error("The analysis server returned an unreadable response.");
-  }
-  if (!response.ok) {
-    const detail =
-      typeof payload === "object" && payload !== null && "detail" in payload &&
-      typeof payload.detail === "string"
-        ? payload.detail
-        : `The analysis request failed (${response.status}).`;
-    throw new Error(detail);
-  }
-  return payload as T;
-}
+type UploadState =
+  | { phase: "idle" }
+  | { phase: "uploading"; percent: number }
+  | { phase: "uploaded" }
+  | { phase: "failed"; error: string };
 
-function isTriage(value: string): value is Triage {
-  return value === "GREEN" || value === "YELLOW" || value === "RED";
+function callErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Response && error.status === 401) return "Your session has expired. Please log in again.";
+  if (error instanceof TypeError) return "Cannot reach the app server. Check your connection and try again.";
+  return fallback;
 }
 
 export function AnalyzeFlow() {
-  const { user, addPrediction, attachExplanation, settings } = useApp();
+  const { user, patientOptions, uploadScanImage, refreshWorkspace } = useApp();
+  const analyzeFn = useServerFn(analyzeScan);
+  const gradcamFn = useServerFn(explainScanGradcam);
+  const limeFn = useServerFn(explainScanLime);
+
+  const [patientId, setPatientId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
+  const [upload, setUpload] = useState<UploadState>({ phase: "idle" });
+  const [prediction, setPrediction] = useState<ModelPrediction | null>(null);
   const [analysisAttempted, setAnalysisAttempted] = useState(false);
   const [predicting, setPredicting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -68,169 +39,213 @@ export function AnalyzeFlow() {
   const [limeSamples, setLimeSamples] = useState<"100" | "500">("100");
   const [explanationBusy, setExplanationBusy] = useState<"gradcam" | "lime" | null>(null);
   const [explanationError, setExplanationError] = useState<string | null>(null);
-  const [gradcamResult, setGradcamResult] = useState<GradcamResponse | null>(null);
-  const [limeResult, setLimeResult] = useState<LimeResponse | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const savedScan = useRef<{ id: string; saved: Promise<boolean> } | null>(null);
+  const [gradcamNotice, setGradcamNotice] = useState<string | null>(null);
+  const [limeNotice, setLimeNotice] = useState<string | null>(null);
+  const [gradcamResult, setGradcamResult] = useState<GradcamImages | null>(null);
+  const [limeResult, setLimeResult] = useState<LimeImages | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const uploadedScan = useRef<{ file: File; scanId: string } | null>(null);
+  const analyzedScanId = useRef<string | null>(null);
   const requestId = useRef(0);
-  const activeController = useRef<AbortController | null>(null);
   const requestInProgress = useRef(false);
-  const analyzedFile = useRef<File | null>(null);
 
-  const handleImageSelected = (file: File | null, imagePreview: string | null) => {
-    requestId.current += 1;
-    activeController.current?.abort();
-    activeController.current = null;
-    requestInProgress.current = false;
-    analyzedFile.current = null;
-    savedScan.current = null;
-    setSaveError(null);
-    setSelectedFile(file);
-    setPreviewUrl(imagePreview);
+  useEffect(() => {
+    if (!patientId && patientOptions[0]) setPatientId(patientOptions[0].id);
+  }, [patientId, patientOptions]);
+
+  const resetResults = () => {
     setPrediction(null);
-    setAnalysisAttempted(false);
-    setPredicting(false);
     setRequestError(null);
     setExplainClass("");
     setExplanationBusy(null);
     setExplanationError(null);
+    setGradcamNotice(null);
+    setLimeNotice(null);
     setGradcamResult(null);
     setLimeResult(null);
+    setSaveNotice(null);
+  };
+
+  const handleImageSelected = (file: File | null, imagePreview: string | null) => {
+    requestId.current += 1;
+    requestInProgress.current = false;
+    uploadedScan.current = null;
+    analyzedScanId.current = null;
+    setSelectedFile(file);
+    setPreviewUrl(imagePreview);
+    setUpload({ phase: "idle" });
+    setAnalysisAttempted(false);
+    setPredicting(false);
+    resetResults();
   };
 
   const analyze = async (file: File) => {
-    if (requestInProgress.current || analyzedFile.current === file) return;
+    if (requestInProgress.current || analyzedScanId.current) return;
+    if (!patientId) {
+      setRequestError("Select a patient before analysing.");
+      return;
+    }
     const request = ++requestId.current;
-    const controller = new AbortController();
-    activeController.current = controller;
     requestInProgress.current = true;
     setAnalysisAttempted(true);
-    setPredicting(true);
-    setRequestError(null);
-    setPrediction(null);
-    const body = new FormData();
-    body.append("file", file);
+    resetResults();
+
     try {
-      const response = await fetch(`${API_BASE_URL}/predict`, {
-        method: "POST",
-        body,
-        signal: controller.signal,
-      });
-      const data = await readResponse<PredictionResponse>(response);
-      if (request !== requestId.current) return;
-      if (
-        typeof data.class_name !== "string" ||
-        typeof data.message !== "string" ||
-        !isTriage(data.triage) ||
-        typeof data.confidence !== "number" ||
-        !Number.isFinite(data.confidence) ||
-        typeof data.uncertainty !== "number" ||
-        !Number.isFinite(data.uncertainty) ||
-        !data.probabilities ||
-        !classCodes.every((code) => Number.isFinite(data.probabilities[code]))
-      ) {
-        throw new Error("The analysis server returned an invalid prediction.");
-      }
-      setPrediction(data);
-      if (user?.role === "patient") {
-        const scanId = crypto.randomUUID();
-        const extra = data as PredictionResponse & { model_name?: unknown; model_version?: unknown };
-        const saved = addPrediction(toPatientReport(data, { id: user.id, name: user.name }, scanId), {
-          file,
-          uncertainty: data.uncertainty,
-          triage: data.triage,
-          probabilities: data.probabilities,
-          modelName: typeof extra.model_name === "string" ? extra.model_name : settings.activeModel,
-          ...(typeof extra.model_version === "string" ? { modelVersion: extra.model_version } : {}),
-        }).then((result) => {
-          if (request === requestId.current) setSaveError(result.ok ? null : result.error);
-          return result.ok;
+      // 1. Upload the original image (reused when retrying the same file).
+      let scanId = uploadedScan.current?.file === file ? uploadedScan.current.scanId : null;
+      if (!scanId) {
+        setUpload({ phase: "uploading", percent: 0 });
+        const uploaded = await uploadScanImage(file, patientId, (percent) => {
+          if (request === requestId.current) setUpload({ phase: "uploading", percent });
         });
-        savedScan.current = { id: scanId, saved };
+        if (request !== requestId.current) return;
+        if (!uploaded.ok) {
+          setUpload({ phase: "failed", error: uploaded.error });
+          setAnalysisAttempted(false);
+          return;
+        }
+        scanId = uploaded.scanId;
+        uploadedScan.current = { file, scanId };
       }
-      setExplainClass(classCode(data.class_name) ?? "nv");
-      analyzedFile.current = file;
+      setUpload({ phase: "uploaded" });
+
+      // 2. Analyse on the server (model token never reaches the browser).
+      setPredicting(true);
+      const result = await analyzeFn({ data: { scanId } });
+      if (request !== requestId.current) return;
+      if (!result.ok) {
+        setRequestError(result.error);
+        // Allow a retry unless the scan is already done or not ours.
+        if (result.code !== "already_analyzed" && result.code !== "forbidden" && result.code !== "not_found") {
+          setAnalysisAttempted(false);
+        }
+        return;
+      }
+      analyzedScanId.current = scanId;
+      setPrediction(result.prediction);
+      setExplainClass(classCode(result.prediction.class_name) ?? "nv");
+      if (result.gradcam.status === "available") {
+        setGradcamResult(result.gradcam.data);
+        if (!result.gradcam.saved) setSaveNotice("Grad-CAM is shown but could not be saved to your history.");
+      } else {
+        setGradcamNotice(
+          result.gradcam.status === "unsupported"
+            ? `${result.gradcam.message} Grad-CAM is not available for this result.`
+            : `Grad-CAM unavailable: ${result.gradcam.message}`,
+        );
+      }
+      void refreshWorkspace();
     } catch (error) {
-      if (request !== requestId.current || (error instanceof DOMException && error.name === "AbortError")) return;
-      setRequestError(
-        error instanceof TypeError
-          ? "Cannot reach the analysis server. Is it running?"
-          : error instanceof Error
-            ? error.message
-            : "The analysis request could not be completed.",
-      );
+      if (request !== requestId.current) return;
+      setRequestError(callErrorMessage(error, "The analysis request could not be completed. Please try again."));
+      setAnalysisAttempted(false);
     } finally {
       if (request === requestId.current) {
         requestInProgress.current = false;
-        activeController.current = null;
         setPredicting(false);
       }
     }
   };
 
-  const persistExplanation = async (kind: "gradcam" | "lime", imageSrc: string) => {
-    const scan = savedScan.current;
-    if (!scan || !(await scan.saved)) return;
-    await attachExplanation(scan.id, kind, imageSrc);
-  };
-
   const explain = async (kind: "gradcam" | "lime") => {
-    if (!selectedFile || !explainClass || requestInProgress.current) return;
+    const scanId = analyzedScanId.current;
+    if (!scanId || !explainClass || requestInProgress.current) return;
     const request = ++requestId.current;
-    const controller = new AbortController();
-    activeController.current = controller;
     requestInProgress.current = true;
     setExplanationBusy(kind);
     setExplanationError(null);
-    if (kind === "gradcam") setGradcamResult(null);
-    else setLimeResult(null);
-    const body = new FormData();
-    body.append("file", selectedFile);
-    body.append("target", explainClass);
-    if (kind === "lime") body.append("samples", limeSamples);
+    if (kind === "gradcam") {
+      setGradcamResult(null);
+      setGradcamNotice(null);
+    } else {
+      setLimeResult(null);
+      setLimeNotice(null);
+    }
     try {
-      const response = await fetch(`${API_BASE_URL}/explain/${kind}`, {
-        method: "POST",
-        body,
-        signal: controller.signal,
-      });
-      if (kind === "gradcam") {
-        const data = await readResponse<GradcamResponse>(response);
-        if (request === requestId.current) {
-          setGradcamResult(data);
-          void persistExplanation("gradcam", data.overlay);
-        }
+      const result =
+        kind === "gradcam"
+          ? await gradcamFn({ data: { scanId, target: explainClass } })
+          : await limeFn({ data: { scanId, target: explainClass, samples: Number(limeSamples) } });
+      if (request !== requestId.current) return;
+      if (!result.ok) {
+        setExplanationError(result.error);
+        return;
+      }
+      if (result.status === "available") {
+        if (kind === "gradcam") setGradcamResult(result.data as GradcamImages);
+        else setLimeResult(result.data as LimeImages);
+        if (!result.saved) setSaveNotice(`${kind === "gradcam" ? "Grad-CAM" : "LIME"} is shown but could not be saved to your history.`);
+        void refreshWorkspace();
       } else {
-        const data = await readResponse<LimeResponse>(response);
-        if (request === requestId.current) {
-          setLimeResult(data);
-          void persistExplanation("lime", data.pos_neg_overlay);
-        }
+        const notice =
+          result.status === "unsupported" ? result.message : `${kind === "gradcam" ? "Grad-CAM" : "LIME"} unavailable: ${result.message}`;
+        if (kind === "gradcam") setGradcamNotice(notice);
+        else setLimeNotice(notice);
       }
     } catch (error) {
-      if (request !== requestId.current || (error instanceof DOMException && error.name === "AbortError")) return;
-      setExplanationError(
-        error instanceof TypeError
-          ? "Cannot reach the analysis server. Is it running?"
-          : error instanceof Error
-            ? error.message
-            : "The explanation request could not be completed.",
-      );
+      if (request !== requestId.current) return;
+      setExplanationError(callErrorMessage(error, "The explanation request could not be completed. Please try again."));
     } finally {
       if (request === requestId.current) {
         requestInProgress.current = false;
-        activeController.current = null;
         setExplanationBusy(null);
       }
     }
   };
 
-  const busy = predicting || explanationBusy !== null;
+  const uploading = upload.phase === "uploading";
+  const busy = uploading || predicting || explanationBusy !== null;
   const probabilities = prediction
     ? classCodes
         .map((code) => ({ code, value: percentage(Number(prediction.probabilities[code]) || 0) }))
         .sort((a, b) => b.value - a.value)
     : [];
+  const noPatient = user?.role === "patient" && patientOptions.length === 0;
+
+  const patientPicker = (
+    <label className="mt-3 block text-xs font-medium text-inksoft">
+      Patient
+      <Select
+        className="mt-1"
+        data-testid="patient-select"
+        aria-label="Patient"
+        value={patientId}
+        disabled={busy || patientOptions.length === 0}
+        onChange={(event) => setPatientId(event.target.value)}
+      >
+        {patientOptions.length === 0 ? <option value="">No patient record found</option> : null}
+        {patientOptions.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name}
+          </option>
+        ))}
+      </Select>
+      {noPatient ? (
+        <span role="alert" className="mt-1 block text-xs font-medium text-riskink">
+          Your patient record is missing. Log out and back in, or contact support.
+        </span>
+      ) : null}
+    </label>
+  );
+
+  const uploadStatus =
+    upload.phase === "uploading" ? (
+      <div data-testid="upload-progress" className="mt-3" role="progressbar" aria-label="Upload progress" aria-valuenow={upload.percent} aria-valuemin={0} aria-valuemax={100}>
+        <div className="mb-1 flex justify-between text-xs text-inksoft">
+          <span>Uploading original image…</span>
+          <span className="font-semibold tabular-nums">{upload.percent}%</span>
+        </div>
+        <ProgressBar value={upload.percent} tone="brand" />
+      </div>
+    ) : upload.phase === "uploaded" ? (
+      <div data-testid="upload-success" role="status" className="mt-2 text-xs font-medium text-brand">
+        Image uploaded securely.
+      </div>
+    ) : upload.phase === "failed" ? (
+      <div data-testid="upload-failed" role="alert" className="mt-2 text-xs font-medium text-riskink">
+        {upload.error}
+      </div>
+    ) : null;
 
   return (
     <>
@@ -242,15 +257,22 @@ export function AnalyzeFlow() {
             analyzing={busy}
             analysisAttempted={analysisAttempted}
             hasPrediction={prediction !== null}
+            header={patientPicker}
+            status={uploadStatus}
+            disabled={!patientId}
           />
 
           <div className="rounded-xl border border-line bg-canvas2 p-4">
-            {predicting ? (
+            {uploading || predicting ? (
               <div className="grid h-full place-items-center text-center">
                 <div>
                   <div className="mx-auto size-8 animate-spin rounded-full border-2 border-line border-t-brand" />
-                  <div className="mt-3 text-sm font-medium">Analysing skin image…</div>
-                  <div className="mt-1 text-xs text-mute">Sending the image to the analysis server</div>
+                  <div className="mt-3 text-sm font-medium">
+                    {uploading ? "Uploading skin image…" : "Analysing skin image…"}
+                  </div>
+                  <div className="mt-1 text-xs text-mute">
+                    {uploading ? "Saving the original image to your private storage" : "Sending the image to the analysis model"}
+                  </div>
                 </div>
               </div>
             ) : requestError ? (
@@ -286,6 +308,11 @@ export function AnalyzeFlow() {
                       </div>
                     </div>
                   </div>
+                  {prediction.model_name || prediction.model_version ? (
+                    <p className="mt-2 text-[11px] text-mute">
+                      Model: {[prediction.model_name, prediction.model_version].filter(Boolean).join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
                 <div data-testid="probability-bars" className="border-t border-line pt-3">
                   <div className="mb-3 text-sm font-semibold">Class probabilities</div>
@@ -332,6 +359,8 @@ export function AnalyzeFlow() {
                   setExplainClass(event.target.value as SkinClassCode);
                   setGradcamResult(null);
                   setLimeResult(null);
+                  setGradcamNotice(null);
+                  setLimeNotice(null);
                   setExplanationError(null);
                 }}
                 aria-label="Explain class"
@@ -362,7 +391,7 @@ export function AnalyzeFlow() {
               </Select>
             </label>
             <Button data-testid="lime-btn" disabled={busy} onClick={() => explain("lime")}>
-              {explanationBusy === "lime" ? "Running LIME…" : "Show LIME"}
+              {explanationBusy === "lime" ? "Running LIME…" : "Generate LIME"}
             </Button>
           </div>
 
@@ -375,6 +404,12 @@ export function AnalyzeFlow() {
             </div>
           ) : null}
           {explanationError ? <p role="alert" className="mt-3 text-xs font-medium text-riskink">{explanationError}</p> : null}
+          {gradcamNotice ? (
+            <p data-testid="gradcam-notice" role="status" className="mt-3 text-xs font-medium text-cautionink">{gradcamNotice}</p>
+          ) : null}
+          {limeNotice ? (
+            <p data-testid="lime-notice" role="status" className="mt-3 text-xs font-medium text-cautionink">{limeNotice}</p>
+          ) : null}
 
           {gradcamResult ? (
             <section data-testid="gradcam-result" className="mt-5 border-t border-line pt-4">
@@ -421,8 +456,8 @@ export function AnalyzeFlow() {
         </Card>
       ) : null}
 
-      {saveError ? (
-        <p role="alert" className="mt-3 text-xs font-medium text-riskink">{saveError}</p>
+      {saveNotice ? (
+        <p role="alert" className="mt-3 text-xs font-medium text-riskink">{saveNotice}</p>
       ) : null}
 
       <p data-testid="disclaimer" className="mt-5 border-t border-line py-4 text-xs leading-relaxed text-inksoft">
