@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { UploadCloud } from "lucide-react";
 import { Button } from "@/components/common/ui";
 import { BLUR_THRESHOLD, validateImageFile } from "@/lib/skin-analysis";
@@ -9,12 +9,20 @@ export function ImageUploader({
   analyzing,
   analysisAttempted,
   hasPrediction,
+  header,
+  status,
+  disabled = false,
 }: {
   onAnalyze: (file: File) => void;
   onImageSelected: (file: File | null, previewUrl: string | null) => void;
   analyzing: boolean;
   analysisAttempted: boolean;
   hasPrediction: boolean;
+  /** Shown above the drop zone (patient selection). */
+  header?: ReactNode;
+  /** Upload progress / success messages under the image. */
+  status?: ReactNode;
+  disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -126,6 +134,7 @@ export function ImageUploader({
     <div>
       <div className="text-sm font-semibold">New scan</div>
       <p className="mt-1 text-xs text-mute">Upload a clear, well-lit photo of the affected area.</p>
+      {header}
 
       {preview ? (
         <div className="mt-3 overflow-hidden rounded-xl border border-line">
@@ -189,11 +198,12 @@ export function ImageUploader({
           Low image quality: results may be unreliable
         </div>
       ) : null}
+      {status}
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
           data-testid="analyse-btn"
-          disabled={!selectedFile || analyzing || analysisAttempted}
+          disabled={!selectedFile || analyzing || analysisAttempted || disabled}
           onClick={() => selectedFile && onAnalyze(selectedFile)}
         >
           {analyzing ? "Analysing…" : hasPrediction ? "Analysis complete" : analysisAttempted ? "Analysis attempted" : "Analyze image"}
