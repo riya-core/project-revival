@@ -113,29 +113,6 @@ export const submitReview = createServerFn({ method: "POST" })
     return { ok: !error && saved === true };
   });
 
-export const attachScanExplanation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => {
-    const body = readObject(input);
-    const kind = body["kind"];
-    if (kind !== "gradcam" && kind !== "lime") throw new Error("Invalid explanation type");
-    return {
-      scanId: readUuid(body["scanId"], "scan"),
-      kind,
-      path: readText(body["path"], 300, "Path"),
-    };
-  })
-  .handler(async ({ data, context }) => {
-    const admin = await loadAdmin();
-    const { data: saved, error } = await admin.rpc("attach_scan_explanation", {
-      _actor: context.userId,
-      _scan_id: data.scanId,
-      _kind: data.kind,
-      _path: data.path,
-    });
-    return { ok: !error && saved === true };
-  });
-
 export const logSessionEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => {

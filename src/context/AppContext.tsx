@@ -12,7 +12,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import type { MockUser, Prediction, Role, SystemLog } from "@/data/mockData";
 import {
-  attachScanExplanation,
   listClinicians,
   logSessionEvent,
   markScanSeen,
@@ -35,6 +34,7 @@ import {
   type ProfileRow,
   type ScanWithRelations,
 } from "@/lib/scan-records";
+import { uploadWithProgress } from "@/lib/upload-with-progress";
 
 export interface SessionUser {
   id: string;
@@ -54,13 +54,11 @@ export type RegisterResult =
   | { ok: true; needsConfirmation: true }
   | { ok: false; error: string };
 
-export interface ScanDetails {
-  file?: File | null;
-  uncertainty?: number;
-  triage?: string;
-  probabilities?: Record<string, number>;
-  modelName?: string;
-  modelVersion?: string;
+export type UploadScanResult = { ok: true; scanId: string } | { ok: false; error: string };
+
+export interface PatientOption {
+  id: string;
+  name: string;
 }
 
 interface AppContextValue {
@@ -77,8 +75,12 @@ interface AppContextValue {
   register: (name: string, email: string, password: string, role: Exclude<Role, "admin">) => Promise<RegisterResult>;
   logout: () => Promise<void>;
   updateProfile: (patch: Partial<SessionUser>) => Promise<ActionResult>;
-  addPrediction: (prediction: Prediction, details?: ScanDetails) => Promise<ActionResult>;
-  attachExplanation: (scanId: string, kind: "gradcam" | "lime", imageSrc: string) => Promise<void>;
+  /** Patient records the signed-in user may upload images for. */
+  patientOptions: PatientOption[];
+  /** Uploads the original image to private storage and registers an unanalysed scan. */
+  uploadScanImage: (file: File, patientId: string, onProgress: (percent: number) => void) => Promise<UploadScanResult>;
+  /** Re-reads scans and results after the server has saved a model result. */
+  refreshWorkspace: () => Promise<void>;
   requestReview: (id: string) => Promise<ActionResult>;
   markCaseSeen: (id: string) => void;
   saveDiagnosis: (
@@ -92,6 +94,7 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 const SCAN_BUCKET = "scan-images";
+const HEATMAP_BUCKET = "heatmaps";
 const SCAN_SELECT = "*, patients(user_id, name), reports(*)";
 const REFRESH_MS = 60_000;
 
@@ -125,7 +128,7 @@ function authErrorMessage(message: string): string {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [patientRecordId, setPatientRecordId] = useState<string | null>(null);
+  const [patientRecord, setPatientRecord] = useState<PatientOption | null>(null);
   const [users, setUsers] = useState<MockUser[]>([]);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [logs, setLogs] = useState<SystemLog[]>([]);
@@ -138,7 +141,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const requestReviewFn = useServerFn(requestScanReview);
   const markSeenFn = useServerFn(markScanSeen);
   const submitReviewFn = useServerFn(submitReview);
-  const attachExplanationFn = useServerFn(attachScanExplanation);
   const logSessionFn = useServerFn(logSessionEvent);
   const listCliniciansFn = useServerFn(listClinicians);
 
@@ -146,7 +148,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadedUserId.current = null;
     seenRequested.current.clear();
     setUser(null);
-    setPatientRecordId(null);
+    setPatientRecord(null);
     setUsers([]);
     setPredictions([]);
     setLogs([]);
@@ -183,7 +185,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const [patientsResult, scansResult, settingsResult, profilesResult, logsResult, clinicians] = await Promise.all([
         supabase.from("patients").select("*"),
-        supabase.from("scans").select(SCAN_SELECT).order("created_at", { ascending: false }),
+        supabase
+          .from("scans")
+          .select(SCAN_SELECT)
+          .eq("analysis_status", "analyzed")
+          .order("created_at", { ascending: false }),
         supabase.from("system_settings").select("setting_key, setting_value"),
         profilesQuery,
         logsQuery,
@@ -199,7 +205,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
       const signedUrls = new Map<string, string>();
       if (explanationPaths.length) {
-        const { data: signed } = await supabase.storage.from(SCAN_BUCKET).createSignedUrls(explanationPaths, 60 * 60);
+        const { data: signed } = await supabase.storage.from(HEATMAP_BUCKET).createSignedUrls(explanationPaths, 60 * 60);
         for (const item of signed ?? []) {
           if (item.path && item.signedUrl) signedUrls.set(item.path, item.signedUrl);
         }
@@ -221,7 +227,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const sessionUser = toSessionUser(profile, patientByUser.get(profile.id));
       loadedUserId.current = userId;
       setUser(sessionUser);
-      setPatientRecordId(patientByUser.get(profile.id)?.id ?? null);
+      const ownPatient = role === "patient" ? patientByUser.get(profile.id) : undefined;
+      setPatientRecord(ownPatient ? { id: ownPatient.id, name: ownPatient.name || profile.full_name || "Me" } : null);
       setUsers(nextUsers);
       setPredictions(
         scans.map((scan) =>
@@ -398,72 +405,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [reload, user],
   );
 
-  const addPrediction = useCallback<AppContextValue["addPrediction"]>(
-    async (prediction, details = {}) => {
-      if (!user || user.role !== "patient" || !patientRecordId) {
-        return { ok: false, error: "Sign in as a patient to save scans." };
+  const uploadScanImage = useCallback<AppContextValue["uploadScanImage"]>(
+    async (file, patientId, onProgress) => {
+      if (!user || user.role !== "patient" || !patientRecord || patientRecord.id !== patientId) {
+        return { ok: false, error: "Select your patient record before uploading." };
       }
-      let imagePath: string | null = null;
-      if (details.file) {
-        const ext = /\.png$/i.test(details.file.name) ? "png" : "jpg";
-        const path = `${user.id}/${prediction.id}/original.${ext}`;
-        const { error: uploadError } = await supabase.storage.from(SCAN_BUCKET).upload(path, details.file, {
-          contentType: ext === "png" ? "image/png" : "image/jpeg",
-          upsert: true,
-        });
-        if (!uploadError) imagePath = path;
-        else console.error("Scan image upload failed", uploadError);
-      }
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      if (!accessToken) return { ok: false, error: "Your session has expired. Please log in again." };
+      const scanId = crypto.randomUUID();
+      const ext = /\.png$/i.test(file.name) ? "png" : "jpg";
+      const path = `${user.id}/${scanId}/original.${ext}`;
+      const uploaded = await uploadWithProgress({ bucket: SCAN_BUCKET, path, file, accessToken, onProgress });
+      if (!uploaded.ok) return uploaded;
       const { error } = await supabase.from("scans").insert({
-        id: prediction.id,
-        patient_id: patientRecordId,
+        id: scanId,
+        patient_id: patientId,
         user_id: user.id,
-        image_path: imagePath,
-        prediction: prediction.disease.slice(0, 120),
-        confidence: Math.min(100, Math.max(0, prediction.confidence)),
-        uncertainty: details.uncertainty ?? null,
-        model_name: details.modelName?.slice(0, 120) ?? settings.activeModel,
-        model_version: details.modelVersion?.slice(0, 60) ?? null,
-        status: prediction.status,
-        triage: details.triage ?? null,
-        risk: prediction.risk,
-        region: prediction.region,
-        description: prediction.description.slice(0, 2000),
-        probabilities: toJson(details.probabilities ?? {}),
-        differential: toJson(prediction.differential),
-        explanation: toJson(prediction.explanation),
+        image_path: path,
       });
       if (error) {
-        console.error("Saving scan failed", error);
-        return { ok: false, error: "This result could not be saved to your history." };
+        console.error("Registering the uploaded scan failed", error);
+        return { ok: false, error: "The image was uploaded but could not be registered. Please try again." };
       }
-      if (prediction.status === "Review Required") await syncQueue();
-      await reload();
-      return { ok: true };
+      return { ok: true, scanId };
     },
-    [patientRecordId, reload, settings.activeModel, syncQueue, user],
+    [patientRecord, user],
   );
 
-  const attachExplanation = useCallback<AppContextValue["attachExplanation"]>(
-    async (scanId, kind, imageSrc) => {
-      if (!user || user.role !== "patient" || !imageSrc.startsWith("data:image/")) return;
-      try {
-        const blob = await (await fetch(imageSrc)).blob();
-        const ext = blob.type === "image/jpeg" ? "jpg" : "png";
-        const path = `${user.id}/${scanId}/${kind}.${ext}`;
-        const { error } = await supabase.storage.from(SCAN_BUCKET).upload(path, blob, {
-          contentType: blob.type || "image/png",
-          upsert: true,
-        });
-        if (error) throw error;
-        await attachExplanationFn({ data: { scanId, kind, path } });
-        await reload();
-      } catch (error) {
-        console.error("Saving explanation image failed", error);
-      }
-    },
-    [attachExplanationFn, reload, user],
-  );
+  const patientOptions = useMemo(() => (patientRecord ? [patientRecord] : []), [patientRecord]);
 
   const requestReview = useCallback<AppContextValue["requestReview"]>(
     async (id) => {
@@ -564,8 +534,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       updateProfile,
-      addPrediction,
-      attachExplanation,
+      patientOptions,
+      uploadScanImage,
+      refreshWorkspace: reload,
       requestReview,
       markCaseSeen,
       saveDiagnosis,
@@ -584,8 +555,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       updateProfile,
-      addPrediction,
-      attachExplanation,
+      patientOptions,
+      uploadScanImage,
+      reload,
       requestReview,
       markCaseSeen,
       saveDiagnosis,
