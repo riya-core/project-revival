@@ -144,10 +144,13 @@ export type Database = {
       }
       scans: {
         Row: {
+          analysis_error: string | null
+          analysis_status: string
+          analyzed_at: string | null
           assigned_at: string | null
           assigned_doctor_id: string | null
           assignment_attempts: number
-          confidence: number
+          confidence: number | null
           created_at: string
           description: string
           differential: Json
@@ -159,7 +162,7 @@ export type Database = {
           model_name: string | null
           model_version: string | null
           patient_id: string
-          prediction: string
+          prediction: string | null
           probabilities: Json
           queue_priority: string | null
           region: string
@@ -174,10 +177,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          analysis_error?: string | null
+          analysis_status?: string
+          analyzed_at?: string | null
           assigned_at?: string | null
           assigned_doctor_id?: string | null
           assignment_attempts?: number
-          confidence: number
+          confidence?: number | null
           created_at?: string
           description?: string
           differential?: Json
@@ -189,7 +195,7 @@ export type Database = {
           model_name?: string | null
           model_version?: string | null
           patient_id: string
-          prediction: string
+          prediction?: string | null
           probabilities?: Json
           queue_priority?: string | null
           region?: string
@@ -204,10 +210,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          analysis_error?: string | null
+          analysis_status?: string
+          analyzed_at?: string | null
           assigned_at?: string | null
           assigned_doctor_id?: string | null
           assignment_attempts?: number
-          confidence?: number
+          confidence?: number | null
           created_at?: string
           description?: string
           differential?: Json
@@ -219,7 +228,7 @@ export type Database = {
           model_name?: string | null
           model_version?: string | null
           patient_id?: string
-          prediction?: string
+          prediction?: string | null
           probabilities?: Json
           queue_priority?: string | null
           region?: string
