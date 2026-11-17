@@ -1,0 +1,24 @@
+{
+  "protocol": "validation-only v2",
+  "score": "std_pred",
+  "T": 50,
+  "green_acc_target": 0.95,
+  "red_acc_target": 0.6,
+  "t_green": 0.048554283036281995,
+  "t_red": 0.07366477548067754,
+  "melanoma_cutoff": 0.03,
+  "mel_index": 4,
+  "class_names": [
+    "akiec",
+    "bcc",
+    "bkl",
+    "df",
+    "mel",
+    "nv",
+    "vasc"
+  ],
+  "n_validation_images": 1994,
+  "fitted_on": "validation only",
+  "created": "2026-11-02T10:58:13",
+  "config_sha256": "31cd901bf90d9b18ebc26b23e9739d59d9f58868cf7040341bc2f030586da435"
+}

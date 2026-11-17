@@ -1,0 +1,33 @@
+# Raw datasets
+data/raw/
+
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+uncertainty/cache/
+
+# Environment files
+.env
+
+model/*resume*.pt
+model/*checkpoint*.pt
+model/ham10000_cnn.pt
+notebooks/model_training.ipynb
+
+notebooks/densenetmodelP1.ipynb
+notebooks/densenetmodelP2.ipynb
+notebooks/densenetmodelP3.ipynb
+model/densenetmodelP1.pt
+model/densenetmodelP2.pt
+model/densenetmodelP3.pt
+
+figures/trainingnotebooks/densenetmodelP1.ipynb
+notebooks/densenetmodelP2.ipynb
+notebooks/densenetp3.ipynb

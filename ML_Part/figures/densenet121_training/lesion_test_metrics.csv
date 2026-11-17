@@ -1,0 +1,2 @@
+model,evaluation,checkpoint,test_samples,test_accuracy,test_macro_f1
+DenseNet121,Lesion-level test set,densenet121_ham10000_lesion_best.pt,2014,0.8118172790466733,0.6748169228538297

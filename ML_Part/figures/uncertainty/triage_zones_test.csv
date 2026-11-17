@@ -1,0 +1,4 @@
+zone,images,share_%,accuracy,acc_ci95_low,acc_ci95_high,errors,errors_share_%
+GREEN,996,49.5,0.9398,0.923,0.953,60,15.9
+YELLOW,525,26.1,0.8038,0.768,0.836,103,27.2
+RED,493,24.5,0.5639,0.52,0.607,215,56.9

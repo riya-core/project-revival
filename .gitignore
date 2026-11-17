@@ -6,6 +6,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+ML_Part/venv/
+ML_Part/__pycache__/
+.env
+.env.*
 
 .env
 .env.*
