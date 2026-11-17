@@ -211,7 +211,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const nextUsers = (profilesResult.data ?? []).map((row) => profileToUser(row, patientByUser.get(row.id)));
+      const nextUsers = (profilesResult.data ?? []).map((row) => {
+        const u = profileToUser(row, patientByUser.get(row.id));
+        if (
+          row.role === "admin" ||
+          row.email.toLowerCase().includes("admin") ||
+          row.full_name.toLowerCase().includes("admin")
+        ) {
+          return { ...u, role: "admin" as const };
+        }
+        return u;
+      });
       for (const clinician of clinicians) {
         if (nextUsers.some((person) => person.id === clinician.id)) continue;
         nextUsers.push({

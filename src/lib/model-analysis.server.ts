@@ -204,7 +204,12 @@ export async function runAnalysis(
   config: ModelConfig,
   input: { userId: string; scanId: string; imagePath: string | null; fallbackModelName: string },
 ): Promise<
-  | { ok: true; prediction: ModelPrediction; gradcam: ExplanationOutcome<GradcamImages> }
+  | {
+      ok: true;
+      prediction: ModelPrediction;
+      gradcam: ExplanationOutcome<GradcamImages>;
+      lime: ExplanationOutcome<LimeImages>;
+    }
   | Failure
 > {
   const { userId, scanId } = input;
@@ -282,5 +287,15 @@ export async function runAnalysis(
     target: parsed.value.class_code,
     samples: 0,
   })) as ExplanationOutcome<GradcamImages>;
-  return { ok: true, prediction: parsed.value, gradcam };
+
+  const lime = (await runExplanation(admin, config, {
+    userId,
+    scanId,
+    image,
+    kind: "lime",
+    target: parsed.value.class_code,
+    samples: 100,
+  })) as ExplanationOutcome<LimeImages>;
+
+  return { ok: true, prediction: parsed.value, gradcam, lime };
 }

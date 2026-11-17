@@ -29,7 +29,12 @@ function Inner() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   const patients = users
-    .filter((u) => u.role === "patient")
+    .filter(
+      (u) =>
+        u.role === "patient" &&
+        !u.email.toLowerCase().includes("admin") &&
+        !u.name.toLowerCase().includes("admin"),
+    )
     .filter((u) => !query || u.name.toLowerCase().includes(query.toLowerCase()));
 
   const selected = patients.find((p) => p.id === openId) ?? null;

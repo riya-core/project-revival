@@ -38,15 +38,24 @@ export function uploadWithProgress(options: {
         resolve({ ok: true });
         return;
       }
-      resolve({
-        ok: false,
-        error:
-          request.status === 413
-            ? "This image is larger than storage allows."
-            : request.status === 401 || request.status === 403
-              ? "Your session has expired. Please log in again."
-              : "The image could not be uploaded. Please try again.",
-      });
+      let error = "The image could not be uploaded. Please try again.";
+      if (request.status === 413) {
+        error = "This image is larger than storage allows.";
+      } else if (request.status === 401 || request.status === 403) {
+        error = "Your session has expired. Please log in again.";
+      } else {
+        try {
+          const parsed = JSON.parse(request.responseText) as { message?: string; error?: string };
+          if (parsed?.message) {
+            error = `Upload failed: ${parsed.message}`;
+          } else if (parsed?.error) {
+            error = `Upload failed: ${parsed.error}`;
+          }
+        } catch {
+          /* use fallback */
+        }
+      }
+      resolve({ ok: false, error });
     };
     request.onerror = () => resolve({ ok: false, error: "Cannot reach image storage. Check your connection." });
     request.onabort = () => resolve({ ok: false, error: "The upload was cancelled." });

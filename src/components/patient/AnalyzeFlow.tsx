@@ -18,6 +18,10 @@ type UploadState =
 function callErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Response && error.status === 401) return "Your session has expired. Please log in again.";
   if (error instanceof TypeError) return "Cannot reach the app server. Check your connection and try again.";
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error && typeof (error as { message: unknown }).message === "string") {
+    return (error as { message: string }).message;
+  }
   return fallback;
 }
 
@@ -81,8 +85,9 @@ export function AnalyzeFlow() {
 
   const analyze = async (file: File) => {
     if (requestInProgress.current || analyzedScanId.current) return;
-    if (!patientId) {
-      setRequestError("Select a patient before analysing.");
+    const effectivePatientId = patientId || patientOptions[0]?.id;
+    if (!effectivePatientId) {
+      setRequestError("No patient record found. Please ensure your profile is active.");
       return;
     }
     const request = ++requestId.current;
@@ -95,7 +100,7 @@ export function AnalyzeFlow() {
       let scanId = uploadedScan.current?.file === file ? uploadedScan.current.scanId : null;
       if (!scanId) {
         setUpload({ phase: "uploading", percent: 0 });
-        const uploaded = await uploadScanImage(file, patientId, (percent) => {
+        const uploaded = await uploadScanImage(file, effectivePatientId, (percent) => {
           if (request === requestId.current) setUpload({ phase: "uploading", percent });
         });
         if (request !== requestId.current) return;
@@ -133,6 +138,11 @@ export function AnalyzeFlow() {
             ? `${result.gradcam.message} Grad-CAM is not available for this result.`
             : `Grad-CAM unavailable: ${result.gradcam.message}`,
         );
+      }
+      if (result.lime?.status === "available") {
+        setLimeResult(result.lime.data);
+      } else if (result.lime?.status === "unsupported" || result.lime?.status === "failed") {
+        setLimeNotice(result.lime.message);
       }
       void refreshWorkspace();
     } catch (error) {
@@ -202,31 +212,35 @@ export function AnalyzeFlow() {
     : [];
   const noPatient = user?.role === "patient" && patientOptions.length === 0;
 
-  const patientPicker = (
-    <label className="mt-3 block text-xs font-medium text-inksoft">
-      Patient
-      <Select
-        className="mt-1"
-        data-testid="patient-select"
-        aria-label="Patient"
-        value={patientId}
-        disabled={busy || patientOptions.length === 0}
-        onChange={(event) => setPatientId(event.target.value)}
-      >
-        {patientOptions.length === 0 ? <option value="">No patient record found</option> : null}
-        {patientOptions.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </Select>
-      {noPatient ? (
-        <span role="alert" className="mt-1 block text-xs font-medium text-riskink">
-          Your patient record is missing. Log out and back in, or contact support.
-        </span>
-      ) : null}
-    </label>
-  );
+  const patientPicker =
+    patientOptions.length > 1 ? (
+      <label className="mt-3 block text-xs font-medium text-inksoft">
+        Patient
+        <Select
+          className="mt-1"
+          data-testid="patient-select"
+          aria-label="Patient"
+          value={patientId}
+          disabled={busy}
+          onChange={(event) => setPatientId(event.target.value)}
+        >
+          {patientOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </Select>
+      </label>
+    ) : patientOptions.length === 1 ? (
+      <div className="mt-3 flex items-center justify-between rounded-lg border border-line bg-canvas2 px-3 py-2 text-xs">
+        <span className="font-medium text-inksoft">Patient:</span>
+        <span className="font-semibold text-ink">{patientOptions[0].name}</span>
+      </div>
+    ) : noPatient ? (
+      <span role="alert" className="mt-3 block text-xs font-medium text-riskink">
+        Your patient record is missing. Log out and back in, or contact support.
+      </span>
+    ) : null;
 
   const uploadStatus =
     upload.phase === "uploading" ? (
@@ -259,7 +273,7 @@ export function AnalyzeFlow() {
             hasPrediction={prediction !== null}
             header={patientPicker}
             status={uploadStatus}
-            disabled={!patientId}
+            disabled={!patientId && patientOptions.length === 0}
           />
 
           <div className="rounded-xl border border-line bg-canvas2 p-4">
